@@ -1,6 +1,6 @@
 # My local notes
 Technical challenges.txt
-
+S
 ### C++ ###
 # Prerequisites
 *.d
@@ -14,6 +14,12 @@ Technical challenges.txt
 # Precompiled Headers
 *.gch
 *.pch
+
+# Linker files
+*.ilk
+
+# Debugger Files
+*.pdb
 
 # Compiled Dynamic libraries
 *.so
@@ -450,7 +456,5 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 
-### VisualStudio Patch ###
-# Additional files built by Visual Studio
-
-# End of https://www.toptal.com/developers/gitignore/api/visualstudio,c++,cmake
+# debug information files
+*.dwo
