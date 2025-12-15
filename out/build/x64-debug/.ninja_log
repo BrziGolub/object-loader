@@ -1,6 +1,0 @@
-# ninja log v6
-7	581	7875191543662287	ObjectLoader/CMakeFiles/ObjectLoader.dir/ObjectLoader.cpp.obj	83a2f4b54c824f06
-582	822	7875191549399749	ObjectLoader/ObjectLoader.exe	a04c389f939f5607
-37	1021	7875367647351251	tests/CMakeFiles/meshloader_tests.dir/test_main.cpp.obj	b1c7a91880458ccc
-1021	1355	7875367657195014	tests/meshloader_tests.exe	63c82e18794024d1
-46	935	7875367647446600	tests/CMakeFiles/meshloader_tests.dir/test_obj_basic.cpp.obj	675a7917377bf96d
