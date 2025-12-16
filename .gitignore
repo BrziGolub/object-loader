@@ -3,6 +3,7 @@ Technical challenges.txt
 
 # Inclusions
 !tests/assets/
+!examples/assets/
 
 ### C++ ###
 # Prerequisites

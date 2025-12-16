@@ -1,4 +1,4 @@
-# Objectloader
+# Object Loader
 
 Header-only C++ mesh loading library focused on simplicity and reusability.
 

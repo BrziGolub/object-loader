@@ -3,12 +3,13 @@
 
 #include <iostream>
 
+void sanity_test();
 void test_triangle();
 
 int main() {
 	std::cout << "Running meshloader tests..." << std::endl;
 
-	test_triangle();
+	sanity_test();
 
 	std::cout << "All tests passed." << std::endl;
 	return 0;

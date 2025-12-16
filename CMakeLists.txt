@@ -19,4 +19,5 @@ target_include_directories (meshloader INTERFACE include)
 
 # Include sub-projects.
 add_subdirectory (tests)
+add_subdirectory (examples)
 add_subdirectory ("ObjectLoader")
