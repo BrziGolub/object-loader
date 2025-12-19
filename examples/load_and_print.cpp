@@ -8,8 +8,9 @@ void load_and_print(meshloader::Mesh& mesh);
 int main() {
 
 	meshloader::Mesh mesh;
+	std::vector<meshloader::ObjError> errors;
 
-	if (meshloader::loadOBJ(EXAMPLE_ASSETS_DIR "/triangle.obj", mesh) != meshloader::Result::Success) {
+	if (meshloader::loadOBJ(EXAMPLE_ASSETS_DIR "/triangle.obj", mesh, errors) != meshloader::Result::Success) {
 		std::cerr << "Failed to load mesh" << std::endl;
 		return 1;
 	}

@@ -6,6 +6,24 @@
 
 namespace meshloader {
 	
+	// Error handling structures
+	enum class ErrorSeverity {
+		Warning,
+		Error
+	};
+
+	struct ObjError {
+		size_t line = 0;
+		std::string message;
+		ErrorSeverity severity = ErrorSeverity::Error;
+
+		std::string toString() const {
+			const char* s = severity == ErrorSeverity::Warning ? "Warning" : "Error";
+			if (line > 0) return std::string(s) + " (Line " + std::to_string(line) + "): " + message;
+			return std::string(s) + ": " + message;
+		}
+	};
+
 	struct Vec2 {
 		float x = 0.0f;
 		float y = 0.0f;
@@ -33,9 +51,10 @@ namespace meshloader {
 		FileNotFound,
 		ParseError,
 		Unsupported
+		
 	};
 
-	Result loadOBJ(const std::string& path, Mesh& outMesh);
+	Result loadOBJ(const std::string& path, Mesh& outMesh, std::vector<ObjError>& errors);
 }
 
 #ifdef MESHLOADER_IMPLEMENTATION
@@ -81,7 +100,7 @@ namespace meshloader {
 		return idx;
 	}
 
-	Result loadOBJ(const std::string& path, Mesh& outMesh) {
+	Result loadOBJ(const std::string& path, Mesh& outMesh, std::vector<ObjError>& errors) {
 
 		std::ifstream file(path);
 		if (!file.is_open()) {
@@ -95,8 +114,11 @@ namespace meshloader {
 		std::vector<Vec3> normals;
 		std::vector<ObjFace> faces;
 
+		// Line number in .obj file of detected error
 		std::string line;
+		size_t lineNumber = 0;
 		while (std::getline(file, line)) {
+			++lineNumber;
 
 			if (line.empty() || line[0] == '#') continue;
 
@@ -124,31 +146,86 @@ namespace meshloader {
 
 				std::string token;
 				while (iss >> token) {
-					ObjIndex idx = parseIndex(token);
+					
+					// Handling error with try catch
+					// stoi() can throw
+					ObjIndex idx;
+					try {
+						idx = parseIndex(token);
+					}
+					catch (...) {
+						errors.push_back({ lineNumber, "Invalid face index format", ErrorSeverity::Error });
+						continue;
+					}
 					
 					if (idx.v < 0) idx.v += positions.size();
 
 					face.push_back(idx);
 				}
 
-				if (face.size() < 3) return Result::ParseError;
+				// Preventing degenerate geometry early
+				if (face.size() < 3) {
+					errors.push_back({ lineNumber, "Face has fewer than 3 vertices", ErrorSeverity::Error });
+					continue;
+				}
 
 				faces.push_back(face);
 			}
 		}
 
+		// Empty file check
+		if (positions.empty()) {
+			errors.push_back({ 0, "OBJ file contains no vertex positions", ErrorSeverity::Error });
+			return Result::ParseError;
+		}
+		if (faces.empty()) {
+			errors.push_back({ 0, "OBJ file contains no faces", ErrorSeverity::Error });
+			return Result::ParseError;
+		}
+
+		// Index bounds validation
+		for (const ObjFace& face : faces) {
+			for (const ObjIndex& idx : face) {
+
+				if (idx.v < 0 || idx.v >= (int)positions.size()) {
+					errors.push_back({ 0, "Position index out of range", ErrorSeverity::Error });
+					return Result::ParseError;
+				}
+
+				if (idx.vt != -1 && (idx.vt < 0 || idx.vt >= (int)texcoords.size())) {
+					errors.push_back({ 0, "Texcoord index out of range", ErrorSeverity::Error });
+				}
+
+				if (idx.vn != -1 && (idx.vn < 0 || idx.vn >= (int)normals.size())) {
+					errors.push_back({ 0, "Normal index out of range", ErrorSeverity::Error });
+				}
+			}
+		}
+
 		// Deduplication + triangulation
+		// Deduplication assumes indices are valid
 
 		outMesh.vertices.clear();
 		outMesh.indices.clear();
 		
 		std::unordered_map<ObjIndex, uint32_t, ObjIndexHash> vertexMap;
 
+		auto validIndex = [&](int idx, int max) {
+			return idx >= 0 && idx < max;
+		};
+
 		auto getVertexIndex = [&](const ObjIndex& idx) -> uint32_t {
 			auto it = vertexMap.find(idx);
 			if (it != vertexMap.end()) return it->second;
 
 			Vertex vert{};
+
+			// Valid index guard
+			// This should never triggerif earlier validation is correct
+			if (!validIndex(idx.v, positions.size())) {
+				errors.push_back({ 0, "Invalid position index during mesh build", ErrorSeverity::Error });
+				return 0;
+			}
 
 			vert.position = positions[idx.v];
 
@@ -177,6 +254,12 @@ namespace meshloader {
 				uint32_t i1 = getVertexIndex(face[i]);
 				uint32_t i2 = getVertexIndex(face[i + 1]);
 
+				// Degenerate triangle detection
+				if (i0 == i1 || i1 == i2 || i0 == i2) {
+					errors.push_back({ 0, "Degenerate triangle detected", ErrorSeverity::Error });
+					continue;
+				}
+
 				outMesh.indices.push_back(i0);
 				outMesh.indices.push_back(i1);
 				outMesh.indices.push_back(i2);
@@ -190,6 +273,7 @@ namespace meshloader {
 		*	Uses hash-based deduplication
 		*/
 
+		if (!errors.empty()) return Result::ParseError;
 		return Result::Success;
 	}
 

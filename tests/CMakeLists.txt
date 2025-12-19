@@ -1,6 +1,7 @@
 add_executable(meshloader_tests
 	"test_main.cpp"
 	"test_obj_basic.cpp"
+	"test_errors.cpp"
 )
 
 target_link_libraries(meshloader_tests PRIVATE meshloader)
