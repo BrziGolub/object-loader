@@ -8,6 +8,7 @@
 
 bool runAllTests();
 bool sanity_test();
+bool test_negative_indices();
 bool test_invalid_index();
 bool test_short_face();
 bool test_invalid_token();
@@ -27,6 +28,7 @@ int main() {
 
 bool runAllTests() {
 	EXPECT_TRUE(sanity_test());
+	EXPECT_TRUE(test_negative_indices());
 
 	// Error tests
 	EXPECT_TRUE(test_invalid_index());

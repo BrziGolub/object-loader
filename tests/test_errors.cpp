@@ -1,7 +1,5 @@
 #include "meshloader/meshloader.h"
 
-#include <iostream>
-
 #define EXPECT_TRUE(x) if (!(x)) return false;
 #define EXPECT_EQ(a,b) if ((a)!=(b)) return false;
 

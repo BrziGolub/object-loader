@@ -93,11 +93,26 @@ namespace meshloader {
 		std::stringstream ss(token);
 		std::string part;
 
-		if (std::getline(ss, part, '/')) idx.v = std::stoi(part) - 1;
-		if (std::getline(ss, part, '/')) idx.vt = part.empty() ? -1 : std::stoi(part) - 1;
-		if (std::getline(ss, part, '/')) idx.vn = part.empty() ? -1 : std::stoi(part) - 1;
+		if (std::getline(ss, part, '/')) idx.v = std::stoi(part);
+		if (std::getline(ss, part, '/')) idx.vt = part.empty() ? -1 : std::stoi(part);
+		if (std::getline(ss, part, '/')) idx.vn = part.empty() ? -1 : std::stoi(part);
 
 		return idx;
+	}
+
+	bool resolveIndex(int& idx, int count) {
+		if (idx > 0) {
+			idx -= 1;
+		}
+		else if (idx < 0) {
+			idx = count + idx;
+		}
+		else {
+			// OBJ index 0 is not valid
+			return false;
+		}
+
+		return idx >= 0 && idx < count;
 	}
 
 	Result loadOBJ(const std::string& path, Mesh& outMesh, std::vector<ObjError>& errors) {
@@ -158,7 +173,27 @@ namespace meshloader {
 						continue;
 					}
 					
-					if (idx.v < 0) idx.v += positions.size();
+					// Resolve position index
+					if (!resolveIndex(idx.v, (int)positions.size())) {
+						errors.push_back({ lineNumber, "Position index out of range", ErrorSeverity::Error });
+						continue;
+					}
+
+					// Resolve texcoord index
+					if (idx.vt != -1) {
+						if (!resolveIndex(idx.vt, (int)texcoords.size())) {
+							errors.push_back({ lineNumber, "Texcoord index out of range", ErrorSeverity::Error });
+							idx.vt = -1; // Degrade gracefully
+						}
+					}
+
+					// Resolve normal index
+					if (idx.vn != -1) {
+						if (!resolveIndex(idx.vn, (int)normals.size())) {
+							errors.push_back({ lineNumber, "Normal index out of range", ErrorSeverity::Error });
+							idx.vn = -1; // Degrade gracefully
+						}
+					}
 
 					face.push_back(idx);
 				}
