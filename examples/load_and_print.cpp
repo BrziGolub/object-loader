@@ -9,8 +9,10 @@ int main() {
 
 	meshloader::Mesh mesh;
 	std::vector<meshloader::ObjError> errors;
+	meshloader::LoadOptions options;
+	options.normalizePositions = true;
 
-	if (meshloader::loadOBJ(EXAMPLE_ASSETS_DIR "/triangle.obj", mesh, errors) != meshloader::Result::Success) {
+	if (meshloader::loadOBJ(EXAMPLE_ASSETS_DIR "/lift.obj", mesh, errors, options) != meshloader::Result::Success) {
 		std::cerr << "Failed to load mesh" << std::endl;
 		return 1;
 	}

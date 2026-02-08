@@ -12,9 +12,10 @@ every feature of the OBJ format.
 
 1. **Header-only design**
 
-	- Single include file
-	- Optional implementation via `#define MESHLOADER_IMPLEMENTATION`
-	- Easy to integrate into any C++ project
+	* Single include file
+	* Optional implementation via `#define MESHLOADER_IMPLEMENTATION`
+	* Easy to integrate into any C++ project
+
 	```cpp
 	#define MESHLOADER_IMPLEMENTATION
 	#include "meshloader/meshloader.h"
@@ -36,21 +37,21 @@ every feature of the OBJ format.
 	};
 	```
 
-	- Suitable for OpenGL / Vulcn / DirectX
-	- Indexed drawing (`glDrawElements` style)
+	* Suitable for OpenGL / Vulcn / DirectX
+	* Indexed drawing (`glDrawElements` style)
 
 3. **OBJ parsing support**
 
 	Supported OBJ elemnts:
-	- `v` - vertex positions
-	- `vt` - texture coordinates
-	- `vn` - vertex normals
-	- `f` - polygonal faces (triangles, quads, n-gons)
+	* `v` - vertex positions
+	* `vt` - texture coordinates
+	* `vn` - vertex normals
+	* `f` - polygonal faces (triangles, quads, n-gons)
 	
 	Unsupported or ignored elements:
-	- materials (`mtl`, `usemtl`)
-	- groups / objects (`g`, `o`)
-	- smoothing groups
+	* materials (`mtl`, `usemtl`)
+	* groups / objects (`g`, `o`)
+	* smoothing groups
 
 4. **Fan triangulation**
 
@@ -71,9 +72,9 @@ every feature of the OBJ format.
 	`(position index, texcoord index, normal index)`
 	
 	Implementation details:
-	- Hash-based deduplication using `std::unordered_map`
-	- Reuses vertices when the full (v, vt, vn) triple matches
-	- Produces a compact vertex buffer and index buffer
+	* Hash-based deduplication using `std::unordered_map`
+	* Reuses vertices when the full (v, vt, vn) triple matches
+	* Produces a compact vertex buffer and index buffer
 
 	This behaviour matches real-world rendering pipelines.
 
@@ -89,9 +90,9 @@ every feature of the OBJ format.
 
 	Rules applied:
 
-	- Indices are resolved at **parse time**
-	- index `0` is rejected (invalid in OBJ)
-	- Out-of-range negative indices are detected as errors
+	* Indices are resolved at **parse time**
+	* index `0` is rejected (invalid in OBJ)
+	* Out-of-range negative indices are detected as errors
 
 	This ensures compatibility with real-world OBJ files.
 1. **Robust error handling and validation**
@@ -100,18 +101,18 @@ every feature of the OBJ format.
 
 	Detected errors include:
 
-	- File not found
-	- Empty OBJ files (no geometry)
-	- Faces with fewer than 3 vertices
-	- Invalid or non-numeric face indices
-	- Out-of-range position / normal / texcoord indices
-	- Degenerate triangles
+	* File not found
+	* Empty OBJ files (no geometry)
+	* Faces with fewer than 3 vertices
+	* Invalid or non-numeric face indices
+	* Out-of-range position / normal / texcoord indices
+	* Degenerate triangles
 
 	Errors are reported via a structure error list:
 
 	```cpp
 	struct ObjError {
-		size_t line;			// Line number (0 if not applicable)
+		size_t line;				// Line number (0 if not applicable)
 		std::string message;		// human-readable description
 		ErrorSeverity severity;		// enum (Error, Warning)
 	
@@ -131,9 +132,9 @@ every feature of the OBJ format.
 	```
 1. **Graceful degradation**
 
-	- Missing normals or UVs are allowed
-	- Invalid optional indices degrade safely
-	- Fatal errors stop loading early
+	* Missing normals or UVs are allowed
+	* Invalid optional indices degrade safely
+	* Fatal errors stop loading early
 
 	This allows the loader to handle imperfect but usable OBJ files.
 
@@ -142,7 +143,7 @@ every feature of the OBJ format.
 
 - C++17 compatible compiler
 - Tested with:
-	- MSVC (Visual Studio)
+	* MSVC (Visual Studio)
 
 No external dependencies.
 

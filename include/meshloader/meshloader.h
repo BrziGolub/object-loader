@@ -46,6 +46,22 @@ namespace meshloader {
 		std::vector<std::uint32_t> indices;
 	};
 
+	struct Material {
+		std::string name;
+
+		Vec3 diffuse = { 1, 1, 1 };
+		Vec3 specular = { 0, 0, 0 };
+		float shininess = 0.0f;
+
+		std::string diffuseTexture;
+	};
+
+	struct LoadOptions {
+		bool normalizePositions = false;
+		bool centerMesh = true;
+		float targetScale = 1.0f; // 1.0 unit size
+	};
+
 	enum class Result {
 		Success,
 		FileNotFound,
@@ -54,7 +70,16 @@ namespace meshloader {
 		
 	};
 
-	Result loadOBJ(const std::string& path, Mesh& outMesh, std::vector<ObjError>& errors);
+	Result loadOBJ(
+		const std::string& path, 
+		Mesh& outMesh, 
+		std::vector<ObjError>& errors, 
+		const LoadOptions& options = {}
+	);
+
+	// OpenGL Headers
+	std::vector<Vertex> getVertexData();
+	std::vector<std::uint32_t> getIndexData();
 }
 
 #ifdef MESHLOADER_IMPLEMENTATION
@@ -64,9 +89,46 @@ namespace meshloader {
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
+#include <cmath>
 
 namespace meshloader {
 
+	// Vector helper functions
+	Vec3 operator+(const Vec3& a, const Vec3& b) {
+		return { a.x + b.x, a.y + b.y, a.z + b.z };
+	}
+
+	Vec3 operator-(const Vec3& a, const Vec3& b) {
+		return { a.x - b.x, a.y - b.y, a.z - b.z };
+	}
+
+	Vec3 operator*(const Vec3& v, float s) {
+		return { v.x * s, v.y * s, v.z * s };
+	}
+
+	Vec3 operator*(float s, const Vec3& v) {
+		return v * s;
+	}
+
+	float dot(const Vec3& a, const Vec3& b) {
+		return a.x * b.x + a.y * b.y + a.z * b.z;
+	}
+
+	Vec3 cross(const Vec3& a, const Vec3& b) {
+		return {
+			a.y * b.z - a.z * b.y,
+			a.z * b.x - a.x * b.z,
+			a.x * b.y - a.y * b.x
+		};
+	}
+
+	Vec3 normalize(const Vec3& v) {
+		float len = std::sqrt(dot(v, v));
+		if (len > 0.0f) return v * (1.0f / len);
+		return { 0, 0, 0 };
+	}
+
+	// Load function helpers
 	struct ObjIndex {
 		int v = -1;
 		int vt = -1;
@@ -115,7 +177,12 @@ namespace meshloader {
 		return idx >= 0 && idx < count;
 	}
 
-	Result loadOBJ(const std::string& path, Mesh& outMesh, std::vector<ObjError>& errors) {
+	Result loadOBJ(
+		const std::string& path, 
+		Mesh& outMesh, 
+		std::vector<ObjError>& errors, 
+		const LoadOptions& options
+	) {
 
 		std::ifstream file(path);
 		if (!file.is_open()) {
@@ -298,6 +365,94 @@ namespace meshloader {
 				outMesh.indices.push_back(i0);
 				outMesh.indices.push_back(i1);
 				outMesh.indices.push_back(i2);
+			}
+		}
+
+		// Building missing normals
+		bool needsNormals = false;
+		for (const auto& v : outMesh.vertices) {
+			if (v.normal.x == 0 && v.normal.y == 0 && v.normal.z == 0) {
+				needsNormals = true;
+				break;
+			}
+		}
+
+		if (needsNormals) {
+			
+			// Reset normals
+			for (auto& v : outMesh.vertices) {
+				v.normal = { 0, 0, 0 };
+			}
+
+			// Accumulate face normals
+			for (size_t i = 0; i < outMesh.indices.size(); i += 3) {
+				uint32_t i0 = outMesh.indices[i];
+				uint32_t i1 = outMesh.indices[i + 1];
+				uint32_t i2 = outMesh.indices[i + 2];
+
+				const Vec3& p0 = outMesh.vertices[i0].position;
+				const Vec3& p1 = outMesh.vertices[i1].position;
+				const Vec3& p2 = outMesh.vertices[i2].position;
+
+				Vec3 edge1 = p1 - p0;
+				Vec3 edge2 = p2 - p0;
+
+				Vec3 faceNormal = cross(edge1, edge2);
+
+				outMesh.vertices[i0].normal = outMesh.vertices[i0].normal + faceNormal;
+				outMesh.vertices[i1].normal = outMesh.vertices[i1].normal + faceNormal;
+				outMesh.vertices[i2].normal = outMesh.vertices[i2].normal + faceNormal;
+			}
+
+			errors.push_back({ 0, "Normals were missing and generated automatically", ErrorSeverity::Warning });
+		}
+
+		// Normalize
+		// Also calculating min and max position for scaling to unit size
+		Vec3 minP = outMesh.vertices[0].position;
+		Vec3 maxP = outMesh.vertices[0].position;
+
+		for (auto& v : outMesh.vertices) {
+			v.normal = normalize(v.normal);
+
+			minP.x = std::min(minP.x, v.position.x);
+			minP.y = std::min(minP.y, v.position.y);
+			minP.z = std::min(minP.z, v.position.z);
+
+			maxP.x = std::max(maxP.x, v.position.x);
+			maxP.y = std::max(maxP.y, v.position.y);
+			maxP.z = std::max(maxP.z, v.position.z);
+		}
+
+		// Compute center and scale
+
+		Vec3 center{
+			(minP.x + maxP.x) * 0.5f,
+			(minP.y + maxP.y) * 0.5f,
+			(minP.z + maxP.z) * 0.5f
+		};
+
+		Vec3 size{
+			maxP.x - minP.x,
+			maxP.y - minP.y,
+			maxP.z - minP.z
+		};
+
+		float maxExtent = std::max({ size.x, size.y, size.z });
+
+		if (options.normalizePositions && maxExtent > 0.0f) {
+			float scale = options.targetScale / maxExtent;
+
+			for (auto& v : outMesh.vertices) {
+				if (options.centerMesh) {
+					v.position.x -= center.x;
+					v.position.y -= center.y;
+					v.position.z -= center.z;
+				}
+
+				v.position.x *= scale;
+				v.position.y *= scale;
+				v.position.z *= scale;
 			}
 		}
 
